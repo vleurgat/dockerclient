@@ -1,4 +1,4 @@
-package registry
+package dockerclient
 
 import (
 	"encoding/json"
