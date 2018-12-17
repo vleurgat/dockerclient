@@ -95,7 +95,7 @@ func (c *Client) doRequest(request *http.Request, target interface{}) error {
 			return err
 		}
 		setHeader(request, "Authorization", bearerAuth)
-		response, err := c.client.Do(request)
+		response, err = c.client.Do(request)
 		if err != nil {
 			return err
 		}
