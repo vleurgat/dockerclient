@@ -4,57 +4,19 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/docker/cli/cli/config/configfile"
 )
 
 type testStruct struct {
 	Name string `json:"name"`
 }
 
-func TestGetResponse(t *testing.T) {
-	t.Run("failure", func(t *testing.T) {
-		httpClient := CreateMockHTTPClientErr(errors.New("oops"))
-		client := Client{client: httpClient, dockerConfig: &configfile.ConfigFile{}}
-		req := &http.Request{}
-		res, err := client.getResponse(req, "auth")
-		if res != nil || err == nil {
-			t.Fatal("expected nil response and non nil error", res)
-		}
-		if !strings.Contains(err.Error(), "oops") {
-			t.Errorf("expected oops; got %s", err)
-		}
-	})
-
-	t.Run("success", func(t *testing.T) {
-		expectedResponse := http.Response{StatusCode: 200}
-		httpClient := CreateMockHTTPClient(expectedResponse)
-		client := Client{client: httpClient, dockerConfig: &configfile.ConfigFile{}}
-		req := &http.Request{}
-		res, err := client.getResponse(req, "auth")
-		if !reflect.DeepEqual(*res, expectedResponse) || err != nil {
-			t.Error("expected matching response and nil error")
-		}
-		if req.Header.Get("Authorization") != "auth" {
-			t.Error("expected headers to be updated: Authorization")
-		}
-		if req.Header.Get("User-Agent") != "regstat" {
-			t.Error("expected headers to be updated: User-Agent")
-		}
-		if req.Header.Get("Accept") != "application/vnd.docker.distribution.manifest.v2+json" {
-			t.Error("expected headers to be updated: Accept")
-		}
-	})
-}
-
-func TestGetJSONFromURL(t *testing.T) {
+func TestDoGet(t *testing.T) {
 	t.Run("bad request", func(t *testing.T) {
 		client := Client{client: nil, dockerConfig: nil}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("::qwertyhello", &testObject)
+		err := client.doGet("::qwertyhello", &testObject)
 		if err == nil {
 			t.Fatal("expected error to be non nil")
 		}
@@ -69,7 +31,7 @@ func TestGetJSONFromURL(t *testing.T) {
 			dockerConfig: nil,
 		}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("http://hello", &testObject)
+		err := client.doGet("http://hello", &testObject)
 		if err == nil {
 			t.Fatal("expected error to be non nil")
 		}
@@ -84,7 +46,7 @@ func TestGetJSONFromURL(t *testing.T) {
 			dockerConfig: nil,
 		}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("http://hello", &testObject)
+		err := client.doGet("http://hello", &testObject)
 		if err == nil {
 			t.Fatal("expected error to be non nil")
 		}
@@ -101,7 +63,7 @@ func TestGetJSONFromURL(t *testing.T) {
 			}),
 			dockerConfig: nil}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("http://hello", &testObject)
+		err := client.doGet("http://hello", &testObject)
 		if err != nil {
 			t.Fatal("expected error to be nil")
 		}
@@ -115,7 +77,7 @@ func TestGetJSONFromURL(t *testing.T) {
 			client:       CreateMockHTTPClient(http.Response{StatusCode: 401}),
 			dockerConfig: nil}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("http://hello", &testObject)
+		err := client.doGet("http://hello", &testObject)
 		if err == nil {
 			t.Fatal("expected error to be non nil")
 		}
@@ -137,7 +99,7 @@ func TestGetJSONFromURL(t *testing.T) {
 			dockerConfig: nil,
 		}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("http://hello", &testObject)
+		err := client.doGet("http://hello", &testObject)
 		if err == nil {
 			t.Fatal("expected error to be non nil")
 		}
@@ -163,7 +125,7 @@ func TestGetJSONFromURL(t *testing.T) {
 			dockerConfig: nil,
 		}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("http://hello", &testObject)
+		err := client.doGet("http://hello", &testObject)
 		if err == nil {
 			t.Fatal("expected error to be non nil")
 		}
@@ -192,7 +154,7 @@ func TestGetJSONFromURL(t *testing.T) {
 			dockerConfig: nil,
 		}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("http://hello", &testObject)
+		err := client.doGet("http://hello", &testObject)
 		if err == nil {
 			t.Fatal("expected error to be non nil")
 		}
@@ -222,7 +184,7 @@ func TestGetJSONFromURL(t *testing.T) {
 			dockerConfig: nil,
 		}
 		testObject := testStruct{}
-		err := client.getJSONFromURL("http://hello", &testObject)
+		err := client.doGet("http://hello", &testObject)
 		if err != nil {
 			t.Fatal("expected error to be nil", err)
 		}

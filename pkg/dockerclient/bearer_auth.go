@@ -63,7 +63,8 @@ func (c *Client) getDockerBearerAuth(response *http.Response, basicAuth string) 
 	if err != nil {
 		return "", err
 	}
-	addHeaders(req, "application/json", basicAuth)
+	setHeader(req, "Authorization", basicAuth)
+	setHeader(req, "Accept", "application/json")
 	response, err = c.client.Do(req)
 	if err != nil {
 		return "", err

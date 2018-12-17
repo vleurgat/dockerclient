@@ -16,14 +16,14 @@ func TestGetDockerBasicAuth(t *testing.T) {
 
 	t.Run("no auth", func(t *testing.T) {
 		client = Client{client: nil, dockerConfig: nil}
-		auth := client.getDockerBasicAuth(&req)
+		auth := client.getDockerBasicAuth("my.host")
 		if auth != "" {
 			t.Errorf("expected empty auth string; got %s", auth)
 		}
 	})
 
 	t.Run("no match", func(t *testing.T) {
-		auth := client.getDockerBasicAuth(&req)
+		auth := client.getDockerBasicAuth("my.host")
 		if auth != "" {
 			t.Errorf("expected empty auth string; got %s", auth)
 		}
@@ -36,7 +36,7 @@ func TestGetDockerBasicAuth(t *testing.T) {
 			t.Error("failed to read JSON", err)
 		}
 		client.dockerConfig = configFile
-		auth := client.getDockerBasicAuth(&req)
+		auth := client.getDockerBasicAuth("my.host")
 		if auth != "Basic token" {
 			t.Errorf("expected 'Basic token'; got %s", auth)
 		}

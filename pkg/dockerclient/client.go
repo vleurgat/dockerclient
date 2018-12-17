@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/docker/cli/cli/config/configfile"
@@ -24,7 +25,6 @@ type HTTPClientImpl struct {
 
 // Do sends an HTTP request and returns an HTTP response. This just calls the equivalent method on http.Client.
 func (h HTTPClientImpl) Do(req *http.Request) (*http.Response, error) {
-	log.Println("call to REAL http.Client.Do")
 	return h.realHTTPClient.Do(req)
 }
 
@@ -52,23 +52,38 @@ func CreateClient(dockerConfig *configfile.ConfigFile) Client {
 	}
 }
 
-func (c *Client) getResponse(req *http.Request, auth string) (*http.Response, error) {
-	addHeaders(req, "application/vnd.docker.distribution.manifest.v2+json", auth)
-	r, err := c.client.Do(req)
-	if err != nil {
-		log.Println("failed to get response", err)
-		return nil, err
-	}
-	return r, nil
-}
-
-func (c *Client) getJSONFromURL(queryURL string, target interface{}) error {
+func (c *Client) doGet(queryURL string, target interface{}) error {
 	request, err := http.NewRequest("GET", queryURL, nil)
 	if err != nil {
 		return err
 	}
-	basicAuth := c.getDockerBasicAuth(request)
-	response, err := c.getResponse(request, basicAuth)
+	setHeader(request, "Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	return c.doRequest(request, target)
+}
+
+func (c *Client) doPut(queryURL string, payload interface{}) error {
+	json, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("PUT", queryURL, strings.NewReader(string(json)))
+	if err != nil {
+		return err
+	}
+	setHeader(request, "Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+	return c.doRequest(request, nil)
+}
+
+func setHeader(request *http.Request, header string, value string) {
+	if header != "" && value != "" {
+		request.Header.Set(header, value)
+	}
+}
+
+func (c *Client) doRequest(request *http.Request, target interface{}) error {
+	basicAuth := c.getDockerBasicAuth(request.Host)
+	setHeader(request, "Authorization", basicAuth)
+	response, err := c.client.Do(request)
 	if err != nil {
 		return err
 	}
@@ -79,42 +94,47 @@ func (c *Client) getJSONFromURL(queryURL string, target interface{}) error {
 		if err != nil {
 			return err
 		}
-		response, err = c.getResponse(request, bearerAuth)
+		setHeader(request, "Authorization", bearerAuth)
+		response, err := c.client.Do(request)
 		if err != nil {
 			return err
 		}
 		if response.StatusCode != 200 {
 			return errors.New("failed to get a good response with bearer auth - status code is " + strconv.Itoa(response.StatusCode))
 		}
-	case 200:
+	case 200, 201:
 		// all good - nothing to do
 	default:
 		// oops
 		return errors.New("failed to get a good response - status code " + strconv.Itoa(response.StatusCode))
 	}
-	defer response.Body.Close()
-	return json.NewDecoder(response.Body).Decode(target)
-}
-
-func addHeaders(req *http.Request, accept string, auth string) {
-	if req.Header == nil {
-		req.Header = make(map[string][]string)
+	err = nil
+	if target != nil {
+		defer response.Body.Close()
+		err = json.NewDecoder(response.Body).Decode(target)
 	}
-	if auth != "" {
-		req.Header.Set("Authorization", auth)
-	}
-	req.Header.Set("User-Agent", "regstat")
-	req.Header.Set("Accept", accept)
+	return err
 }
 
 // GetV2Manifest returns the Docker V2 manifest object that corresponds with the provided registry URL.
 func (c *Client) GetV2Manifest(url string) (schema2.Manifest, error) {
 	v2Manifest := schema2.Manifest{}
-	err := c.getJSONFromURL(url, &v2Manifest)
+	err := c.doGet(url, &v2Manifest)
 	if err != nil {
-		log.Println("failed to get v2 manifest", url, err)
+		log.Println("failed to GET v2 manifest", url, err)
 	} else {
-		log.Printf("successfully read v2 manifest with %d blobs\n", len(v2Manifest.Layers))
+		log.Printf("successful GET of v2 manifest with %d blobs\n", len(v2Manifest.Layers))
 	}
-	return v2Manifest, nil
+	return v2Manifest, err
+}
+
+// PutV2Manifest associates the Docker V2 manifest object with the given tag.
+func (c *Client) PutV2Manifest(url string, v2Manifest schema2.Manifest) error {
+	err := c.doPut(url, v2Manifest)
+	if err != nil {
+		log.Println("failed to PUT v2 manifest", url, err)
+	} else {
+		log.Println("successfully PUT v2 manifest")
+	}
+	return err
 }
