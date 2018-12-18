@@ -12,28 +12,34 @@ import (
 )
 
 func TestParseBearer(t *testing.T) {
-	t.Run("no commas", func(t *testing.T) {
+	t.Run("no match", func(t *testing.T) {
 		kv := parseBearer("hello")
-		if len(kv) != 1 || kv["hello"] != "" {
-			t.Errorf("expected map of hello to empty string; got %s", kv)
+		if len(kv) != 0 {
+			t.Errorf("expected no match; got %s", kv)
 		}
 	})
-	t.Run("three commas", func(t *testing.T) {
-		kv := parseBearer("one,two,three")
+	t.Run("no commas", func(t *testing.T) {
+		kv := parseBearer("one=\"hello\"")
+		if len(kv) != 1 || kv["one"] != "hello" {
+			t.Errorf("expected map of one to hello; got %s", kv)
+		}
+	})
+	t.Run("three entries", func(t *testing.T) {
+		kv := parseBearer("one=\"aaa\",two=\"bbb\",three=\"ccc\"")
 		if len(kv) != 3 {
 			t.Errorf("expected map with three keys; got %s", kv)
 		}
-		if kv["one"] != "" || kv["two"] != "" || kv["three"] != "" {
-			t.Errorf("expected keys to map to empty strings; got %s", kv)
+		if kv["one"] != "aaa" || kv["two"] != "bbb" || kv["three"] != "ccc" {
+			t.Errorf("expected keys to map to strings; got %s", kv)
 		}
 	})
-	t.Run("two entries", func(t *testing.T) {
-		kv := parseBearer("t1=\"hello\" , t2=goodbye")
+	t.Run("two entries with commas", func(t *testing.T) {
+		kv := parseBearer("t1=\"hello,there\" , t2=\"goodbye,again\"")
 		if len(kv) != 2 {
 			t.Errorf("expected map with two keys; got %s", kv)
 		}
-		if kv["t1"] != "hello" || kv["t2"] != "goodbye" {
-			t.Errorf("expected t1:hello and t2:goodbye; got %s", kv)
+		if kv["t1"] != "hello,there" || kv["t2"] != "goodbye,again" {
+			t.Errorf("expected t1:hello,there and t2:goodbye,again; got %s", kv)
 		}
 	})
 }

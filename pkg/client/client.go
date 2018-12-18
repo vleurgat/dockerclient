@@ -35,7 +35,7 @@ type Client struct {
 	dockerConfig *configfile.ConfigFile
 }
 
-// CreateClientProvidingHTTPClient create a Client object, using a real HttpClient implementation.
+// CreateClientProvidingHTTPClient create a Client object, using the provided HttpClient implementation.
 func CreateClientProvidingHTTPClient(httpClient HTTPClient, dockerConfig *configfile.ConfigFile) Client {
 	return Client{
 		client:       httpClient,
@@ -43,7 +43,7 @@ func CreateClientProvidingHTTPClient(httpClient HTTPClient, dockerConfig *config
 	}
 }
 
-// CreateClient create a Client object using the provided HttpClient implementation
+// CreateClient create a Client object, using a real HttpClient implementation.
 func CreateClient(dockerConfig *configfile.ConfigFile) Client {
 	return Client{
 		client: HTTPClientImpl{
@@ -63,11 +63,11 @@ func (c *Client) doGet(queryURL string, target interface{}) error {
 }
 
 func (c *Client) doPut(queryURL string, payload interface{}) error {
-	json, err := json.Marshal(payload)
+	jsonBody, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	body := string(json)
+	body := string(jsonBody)
 	request, err := http.NewRequest("PUT", queryURL, nil)
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (c *Client) doRequest(request *http.Request, target interface{}, body strin
 		if err != nil {
 			return err
 		}
-		if response.StatusCode != 200 {
+		if response.StatusCode != 200 && response.StatusCode != 201 {
 			return errors.New("failed to get a good response with bearer auth - status code is " + strconv.Itoa(response.StatusCode))
 		}
 	case 200, 201:

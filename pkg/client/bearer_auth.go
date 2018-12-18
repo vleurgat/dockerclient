@@ -5,13 +5,18 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 func parseBearer(suffix string) map[string]string {
 	kv := make(map[string]string)
-	for _, token := range strings.Split(suffix, ",") {
+	// we're processing a suffix like: foo="hello,world",bar="abc",goo="anything"
+	// which should result in the map: {foo:hello,world bar:abc goo:anything}
+	rx := regexp.MustCompile("[a-zA-Z0-9]+=\"[^\"]+\"")
+	tokens := rx.FindAllString(suffix, -1)
+	for _, token := range tokens {
 		token = strings.Trim(token, " ")
 		if parts := strings.SplitN(token, "=", 2); len(parts) == 2 {
 			kv[parts[0]] = strings.Trim(parts[1], `"`)
