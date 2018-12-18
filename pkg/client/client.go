@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -58,7 +59,7 @@ func (c *Client) doGet(queryURL string, target interface{}) error {
 		return err
 	}
 	setHeader(request, "Accept", "application/vnd.docker.distribution.manifest.v2+json")
-	return c.doRequest(request, target)
+	return c.doRequest(request, target, "")
 }
 
 func (c *Client) doPut(queryURL string, payload interface{}) error {
@@ -66,12 +67,14 @@ func (c *Client) doPut(queryURL string, payload interface{}) error {
 	if err != nil {
 		return err
 	}
-	request, err := http.NewRequest("PUT", queryURL, strings.NewReader(string(json)))
+	body := string(json)
+	request, err := http.NewRequest("PUT", queryURL, nil)
 	if err != nil {
 		return err
 	}
+	setBody(request, body)
 	setHeader(request, "Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
-	return c.doRequest(request, nil)
+	return c.doRequest(request, nil, body)
 }
 
 func setHeader(request *http.Request, header string, value string) {
@@ -80,7 +83,13 @@ func setHeader(request *http.Request, header string, value string) {
 	}
 }
 
-func (c *Client) doRequest(request *http.Request, target interface{}) error {
+func setBody(request *http.Request, body string) {
+	if body != "" {
+		request.Body = ioutil.NopCloser(strings.NewReader(body))
+	}
+}
+
+func (c *Client) doRequest(request *http.Request, target interface{}, body string) error {
 	basicAuth := c.getDockerBasicAuth(request.Host)
 	setHeader(request, "Authorization", basicAuth)
 	response, err := c.client.Do(request)
@@ -95,6 +104,7 @@ func (c *Client) doRequest(request *http.Request, target interface{}) error {
 			return err
 		}
 		setHeader(request, "Authorization", bearerAuth)
+		setBody(request, body)
 		response, err = c.client.Do(request)
 		if err != nil {
 			return err
