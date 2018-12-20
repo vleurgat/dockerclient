@@ -132,8 +132,6 @@ func (c *Client) GetV2Manifest(url string) (schema2.Manifest, error) {
 	err := c.doGet(url, &v2Manifest)
 	if err != nil {
 		log.Println("failed to GET v2 manifest", url, err)
-	} else {
-		log.Printf("successful GET of v2 manifest with %d blobs\n", len(v2Manifest.Layers))
 	}
 	return v2Manifest, err
 }
@@ -143,8 +141,6 @@ func (c *Client) PutV2Manifest(url string, v2Manifest schema2.Manifest) error {
 	err := c.doPut(url, v2Manifest)
 	if err != nil {
 		log.Println("failed to PUT v2 manifest", url, err)
-	} else {
-		log.Println("successfully PUT v2 manifest")
 	}
 	return err
 }

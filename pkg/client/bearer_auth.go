@@ -10,12 +10,12 @@ import (
 	"strings"
 )
 
-func parseBearer(suffix string) map[string]string {
+func parseBearer(bearer string) map[string]string {
 	kv := make(map[string]string)
 	// we're processing a suffix like: foo="hello,world",bar="abc",goo="anything"
 	// which should result in the map: {foo:hello,world bar:abc goo:anything}
 	rx := regexp.MustCompile("[a-zA-Z0-9]+=\"[^\"]+\"")
-	tokens := rx.FindAllString(suffix, -1)
+	tokens := rx.FindAllString(bearer, -1)
 	for _, token := range tokens {
 		token = strings.Trim(token, " ")
 		if parts := strings.SplitN(token, "=", 2); len(parts) == 2 {
@@ -27,7 +27,7 @@ func parseBearer(suffix string) map[string]string {
 	return kv
 }
 
-func getBrearerAuthURL(response *http.Response) (string, error) {
+func getBearerAuthURL(response *http.Response) (string, error) {
 	header := response.Header.Get("Www-Authenticate")
 	if !strings.HasPrefix(header, "Bearer ") {
 		return "", errors.New("no bearer Www-Authenticate header")
@@ -60,7 +60,7 @@ func extractBearerToken(response *http.Response) (string, error) {
 }
 
 func (c *Client) getDockerBearerAuth(response *http.Response, basicAuth string) (string, error) {
-	bearerURL, err := getBrearerAuthURL(response)
+	bearerURL, err := getBearerAuthURL(response)
 	if err != nil {
 		return "", err
 	}
